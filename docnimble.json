@@ -1,0 +1,11 @@
+{
+  "name": "lone",
+  "purpose": "library",
+  "repo_host_readme_url": "https://github.com/JohnAD/lone",
+  "repo_host_docs_url": "https://github.com/JohnAD/lone/blob/master/docs/",
+  "nimble_url": "https://nimble.directory/pkg/lone",
+  "doc_dir": "docs/",
+  "rst_dir": "rst/",
+  "doc_src_dir": "",
+  "nimble_file": "lone.nimble",
+}
