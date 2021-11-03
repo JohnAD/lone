@@ -8,17 +8,17 @@
 ##
 ##     #! SLONE 1.0
 ##     _ = (person) {*
-##       "full_name" = (name) "Larry Smith"
-##       "main home" = (building) {*
-##         "mailing address" = (address) {*
-##           "street" = (string_array) {*
-##             _ = (string) "1234 Main St"
-##             _ = (string) "Unit 3"
-##           *}
-##           "postal code" = _ "90210"
-##         *}
-##       *}
-##     *}
+##       "full_name" : "name" = "Larry Smith"
+##       "main home" : "building" = {
+##         "mailing address" : address = {
+##           "street" : string_array = {
+##             _ : string = "1234 Main St"
+##             _ : string = "Unit 3"
+##           }
+##           "postal code" = "90210"
+##         }
+##       }
+##     }
 ##
 ## .. code:: nim
 ##
@@ -69,7 +69,8 @@
 
 import
   Options,
-  strformat
+  strformat,
+  std/strutils
 
 type
   LoneNothing = object
@@ -170,9 +171,12 @@ proc deepCopy*(this: Lone): Lone =
 #
 
 proc newLone*(name: Option[string], attrType: Option[string], value: Lone): Lone =
+  var cleanType = none(string)
+  if attrType.isSome:
+    cleanType = some(attrType.get().strip())
   result = Lone(
     name: name,
-    attrType: attrType,
+    attrType: cleanType,
     kind: LvLone,
     entries: newSeq[Lone]()
   )
@@ -188,23 +192,32 @@ proc newLone*(): Lone =
   )
 
 proc newNull(name: Option[string], attrType: Option[string]): Lone =
+  var cleanType = none(string)
+  if attrType.isSome:
+    cleanType = some(attrType.get().strip())
   result = Lone(
     name: name,
-    attrType: attrType,
+    attrType: cleanType,
     kind: LvNull
   )
 
 proc newNothing(name: Option[string], attrType: Option[string]): Lone =
+  var cleanType = none(string)
+  if attrType.isSome:
+    cleanType = some(attrType.get().strip())
   result = Lone(
     name: name,
-    attrType: attrType,
+    attrType: cleanType,
     kind: LvNothing
   )
 
 proc newString(name: Option[string], attrType: Option[string], value: string): Lone =
+  var cleanType = none(string)
+  if attrType.isSome:
+    cleanType = some(attrType.get().strip())
   result = Lone(
     name: name,
-    attrType: attrType,
+    attrType: cleanType,
     kind: LvString,
     str: value
   )
@@ -246,9 +259,13 @@ proc assign(this: var Lone, index: int, value: Lone) =
     else:
       this.entries[foundIndex] = value
 
+#######################################################
 #
-# bracketed assignment at presumed-index-0
+# bracketed assignments at presumed-index-0
 #
+#######################################################
+
+# TODO: chaining a["1"]["2"] = "3" does not work. Look at making proc {.inline.} and making 'assign' a template
 
 proc `[]=`*(this: var Lone, key: string, value: Lone) = this.assign 0, newLone(some(key), none(string), value)
 proc `[]=`*(this: var Lone, key: string, value: string) = this.assign 0, newString(some(key), none(string), value)
@@ -260,10 +277,19 @@ proc `[]=`*(this: var Lone, key: LoneNothing, value: string) = this.assign 0, ne
 # proc `[]=`*(this: var Lone, key: LoneNothing, value: LoneNothing) = means delete
 proc `[]=`*(this: var Lone, key: LoneNothing, value: LoneNull) = this.assign 0, newNull(none(string), none(string))
 #
-proc `[]=`*(this: var Lone, key: LoneNull, value: Lone) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
-proc `[]=`*(this: var Lone, key: LoneNull, value: string) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
-proc `[]=`*(this: var Lone, key: LoneNull, value: LoneNothing) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
-proc `[]=`*(this: var Lone, key: LoneNull, value: LoneNull) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
+#  THE FOLLOWING IS BETTER SERVED AS A COMPILER ERROR
+# proc `[]=`*(this: var Lone, key: LoneNull, value: Lone) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
+# proc `[]=`*(this: var Lone, key: LoneNull, value: string) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
+# proc `[]=`*(this: var Lone, key: LoneNull, value: LoneNothing) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
+# proc `[]=`*(this: var Lone, key: LoneNull, value: LoneNull) = raise newException(IndexDefect, "(Lone) A name cannot be null.")
+
+proc `[]=`*(this: var Lone, key: string, tup: (string, Lone) ) = this.assign 0, newLone(some(key), some(tup[0]), tup[1])
+proc `[]=`*(this: var Lone, key: string, tup: (string, string) ) = this.assign 0, newString(some(key), some(tup[0]), tup[1])
+proc `[]=`*(this: var Lone, key: string, tup: (string, LoneNull) ) = this.assign 0, newNull(some(key), some(tup[0]))
+#
+proc `[]=`*(this: var Lone, key: LoneNothing, tup: (string, Lone) ) = this.assign 0, newLone(none(string), some(tup[0]), tup[1])
+proc `[]=`*(this: var Lone, key: LoneNothing, tup: (string, string) ) = this.assign 0, newString(none(string), some(tup[0]), tup[1])
+proc `[]=`*(this: var Lone, key: LoneNothing, tup: (string, LoneNull) ) = this.assign 0, newNull(none(string), some(tup[0]))
 
 #
 # bracketed assignment with name/index tuple
@@ -374,3 +400,16 @@ proc `==`*(this: string, other: Option[string]): bool =
 proc `==`*(this: Option[string], other: string): bool =
   if this.isSome:
     result = this.get == other
+
+
+iterator items*(this: Lone): Lone =
+  case this.kind:
+  of LvNull:
+    discard
+  of LvNothing:
+    discard
+  of LvString:
+    discard
+  of LvLone:
+    for entry in this.entries:
+      yield entry
