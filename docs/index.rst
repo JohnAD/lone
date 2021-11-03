@@ -2,13 +2,6 @@ Introduction to lone
 ==============================================================================
 ver 0.1.0
 
-.. image:: https://raw.githubusercontent.com/yglukhov/nimble-tag/master/nimble.png
-   :height: 34
-   :width: 131
-   :alt: nimble
-   :target: https://nimble.directory/pkg/lone
-
-
 Code to create:
 
 .. code:: slone
@@ -78,4 +71,4 @@ Table Of Contents
 1. `Introduction to lone <https://github.com/JohnAD/lone>`__
 2. Appendices
 
-    A. `lone Reference <https://github.com/JohnAD/lone/blob/master/docs/lone-ref.rst>`__
+    A. `lone Reference <lone-ref.rst>`__
